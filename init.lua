@@ -57,7 +57,6 @@ require("lazy").setup({
       },
     },
 
-    {'VonHeikemen/lsp-zero.nvim', branch = 'v4.x'},
     {'williamboman/mason.nvim'},
     {'williamboman/mason-lspconfig.nvim'},
     {'hrsh7th/cmp-nvim-lsp'},
@@ -67,30 +66,6 @@ require("lazy").setup({
     {
       'neovim/nvim-lspconfig',
       lazy = false,
-      dependencies = {
-        -- main one
-        { "ms-jpq/coq_nvim", branch = "coq" },
-
-        -- 9000+ Snippets
-        { "ms-jpq/coq.artifacts", branch = "artifacts" },
-
-        -- lua & third party sources -- See https://github.com/ms-jpq/coq.thirdparty
-        -- Need to **configure separately**
-        { 'ms-jpq/coq.thirdparty', branch = "3p" }
-        -- - shell repl
-        -- - nvim lua api
-        -- - scientific calculator
-        -- - comment banner
-        -- - etc
-      },
-      init = function()
-        vim.g.coq_settings = {
-          -- Your COQ settings here
-        }
-      end,
-      config = function()
-        -- Your LSP settings here
-      end,
     },
     {
       "nvim-tree/nvim-tree.lua",
@@ -207,53 +182,78 @@ vim.cmd[[colorscheme tokyonight-night]]
 -----------------------
 ----- LSP stuff -------
 -----------------------
-local lsp_zero = require('lsp-zero')
 
--- lsp_attach is where you enable features that only work
--- if there is a language server active in the file
-local lsp_attach = function(client, bufnr)
-  local opts = {buffer = bufnr}
+-- Attach keybindings when an LSP server attaches to a buffer
+vim.api.nvim_create_autocmd('LspAttach', {
+  desc = 'LSP keybindings',
+  callback = function(event)
+    local opts = { buffer = event.buf }
 
-  vim.keymap.set('n', 'K', '<cmd>lua vim.lsp.buf.hover()<cr>', opts)
-  vim.keymap.set('n', 'gd', '<cmd>lua vim.lsp.buf.definition()<cr>', opts)
-  vim.keymap.set('n', 'gD', '<cmd>lua vim.lsp.buf.declaration()<cr>', opts)
-  vim.keymap.set('n', 'gi', '<cmd>lua vim.lsp.buf.implementation()<cr>', opts)
-  vim.keymap.set('n', 'go', '<cmd>lua vim.lsp.buf.type_definition()<cr>', opts)
-  vim.keymap.set('n', 'gr', '<cmd>lua vim.lsp.buf.references()<cr>', opts)
-  vim.keymap.set('n', 'gs', '<cmd>lua vim.lsp.buf.signature_help()<cr>', opts)
-  vim.keymap.set('n', '<F2>', '<cmd>lua vim.lsp.buf.rename()<cr>', opts)
-  vim.keymap.set('n', '<leader>f', '<cmd>lua vim.lsp.buf.format({async = true})<cr>', opts)
-  vim.keymap.set('n', '<F4>', '<cmd>lua vim.lsp.buf.code_action()<cr>', opts)
-  vim.keymap.set('n', '<leader>e', '<cmd>lua vim.diagnostic.open_float(0, {scope="line"})<cr>', opts)
-end
+    vim.keymap.set('n', 'K', vim.lsp.buf.hover, opts)
+    vim.keymap.set('n', 'gd', vim.lsp.buf.definition, opts)
+    vim.keymap.set('n', 'gD', vim.lsp.buf.declaration, opts)
+    vim.keymap.set('n', 'gi', vim.lsp.buf.implementation, opts)
+    vim.keymap.set('n', 'go', vim.lsp.buf.type_definition, opts)
+    vim.keymap.set('n', 'gr', vim.lsp.buf.references, opts)
+    vim.keymap.set('n', 'gs', vim.lsp.buf.signature_help, opts)
+    vim.keymap.set('n', '<F2>', vim.lsp.buf.rename, opts)
+    vim.keymap.set('n', '<leader>f', function() vim.lsp.buf.format({ async = true }) end, opts)
+    vim.keymap.set('n', '<F4>', vim.lsp.buf.code_action, opts)
+    vim.keymap.set('n', '<leader>e', vim.diagnostic.open_float, opts)
+  end,
+})
 
-lsp_zero.extend_lspconfig({
-  sign_text = true,
-  lsp_attach = lsp_attach,
-  capabilities = require('cmp_nvim_lsp').default_capabilities(),
+-- Configure nvim-cmp
+local cmp = require('cmp')
+cmp.setup({
+  sources = {
+    { name = 'nvim_lsp' },
+  },
+  snippet = {
+    expand = function(args)
+      vim.snippet.expand(args.body)
+    end,
+  },
+  mapping = cmp.mapping.preset.insert({
+    ['<C-Space>'] = cmp.mapping.complete(),
+    ['<CR>'] = cmp.mapping.confirm({ select = true }),
+    ['<Tab>'] = cmp.mapping.select_next_item(),
+    ['<S-Tab>'] = cmp.mapping.select_prev_item(),
+  }),
+})
+
+local capabilities = require('cmp_nvim_lsp').default_capabilities()
+
+-- Default capabilities for all LSP servers
+vim.lsp.config('*', {
+  capabilities = capabilities,
 })
 
 require('mason').setup({})
-require('mason-lspconfig').setup({
-  handlers = {
-    function(server_name)
-      if server_name == "clangd" then
-        require('lspconfig').clangd.setup({
-          init_options = {
-            compileCommands = {
-              Add = {
-                "-std=c++26 -stdlib=libc++",
-              },
-              Remove = {},
-            },
-          },
-        })
-      else
-        require('lspconfig')[server_name].setup({})
-      end
-    end,
+require('mason-lspconfig').setup({})
+
+-- Server specific configurations
+vim.lsp.config('clangd', {
+  cmd = {
+    "clangd",
+    "--extra-arg=-std=c++26",
+    "--extra-arg=-stdlib=libc++",
   },
 })
+vim.lsp.enable('clangd')
+
+-- Filetype detection & LSP config for Roc language
+vim.filetype.add({
+  extension = {
+    roc = "roc",
+  },
+})
+
+vim.lsp.config('roc_ls', {
+  cmd = { "roc", "experimental-lsp" },
+  filetypes = { "roc" },
+})
+vim.lsp.enable('roc_ls')
 -----------------------
 -----------------------
 -----------------------
