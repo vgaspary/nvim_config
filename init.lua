@@ -98,15 +98,6 @@ require("lazy").setup({
       end,
     },
     {
-      'huggingface/llm.nvim',
-      opts = {
-        backend = "ollama",
-        model = "gemma3:1b-it-qat",
-        url = "http://127.0.0.1:11434",
-        enable_suggestions_on_startup = false,
-      }
-    },
-    {
       "nvimtools/hydra.nvim",
       config = function()
         local Hydra = require("hydra")
@@ -156,7 +147,6 @@ vim.opt.guicursor = {
 }
 
 vim.api.nvim_create_autocmd("TermOpen", { pattern = "*", command = "startinsert" })
-vim.api.nvim_del_keymap('n', '<Tab>')
 vim.keymap.set('n', 'j', "gj", { noremap = true })
 vim.keymap.set('n', 'k', "gk", { noremap = true })
 vim.keymap.set('v', 'p', '"_dP', { noremap = true })
