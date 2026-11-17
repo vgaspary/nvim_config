@@ -62,7 +62,6 @@ require("lazy").setup({
     {'hrsh7th/cmp-nvim-lsp'},
     {'hrsh7th/nvim-cmp'},
     {'sindrets/diffview.nvim'}, 
-    {'nvim-treesitter/nvim-treesitter', branch = 'master', lazy = false, build = ":TSUpdate"},
     {
       'neovim/nvim-lspconfig',
       lazy = false,
